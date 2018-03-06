@@ -1,3 +1,5 @@
+from datetime import date
+
 keyWords = [
     '精通',
     '熟悉',
@@ -60,8 +62,8 @@ def deal_position_desc(descriptions):
                     desc = desc[1:]
                 if desc.startswith('●'):
                     desc = desc[1:]
-
-                result.append(desc.strip())
+                if desc:
+                    result.append(desc.strip())
                 break
     return ';'.join(re for re in result)
 
@@ -73,3 +75,12 @@ def deal_position_temptation(temptation):
     if temptation.startswith('职位诱惑:'):
         tem = temptation[5:]
     return tem
+
+def deal_position_pubtime(publish_time):
+    time = publish_time
+    today = date.today()
+    if time.startswith('昨天'):
+        return date(today.year, today.month, today.day-1).strftime('%Y-%m-%d')
+    elif time.startswith('今天'):
+        return today.strftime('%Y-%m-%d')
+    return time

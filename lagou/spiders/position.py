@@ -11,7 +11,7 @@ from scrapy.conf import settings
 from scrapy.exceptions import CloseSpider
 
 from lagou.items import PositionItem, CompanyItem, DetailItem
-from lagou.helper import deal_position_desc, deal_position_temptation
+from lagou.helper import deal_position_desc, deal_position_temptation, deal_position_pubtime
 
 
 class PositionSpider(scrapy.Spider):
@@ -86,7 +86,8 @@ class PositionSpider(scrapy.Spider):
             position['pid'] = pid
             position['name'] = p['positionName']
             position['city'] = p['city']
-            position['publish_time'] = p['createTime']
+            publish_time = p['createTime']
+            position['publish_time'] = deal_position_pubtime(publish_time)
             position['salary'] = p['salary']
             cid = p['companyId']
             position['cid'] = cid
