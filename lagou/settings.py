@@ -15,6 +15,9 @@ SPIDER_MODULES = ['lagou.spiders']
 NEWSPIDER_MODULE = 'lagou.spiders'
 
 
+MAX_ERROR_NUM = 10
+
+
 # 设置代理
 HTTPPROXY_ENABLED = True
 PROXIES = [
@@ -55,9 +58,14 @@ USER_AGENT_LIST = [
 ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
-CONCURRENT_REQUESTS = 4
+CONCURRENT_REQUESTS = 5
 COOKIES_ENABLED = True
 DOWNLOAD_DELAY = 1
+
+RETRY_TIMES = 5
+DOWNLOAD_TIMEOUT = 15
+
+# LOG_LEVEL = 'INFO'
 
 
 # The download delay setting will honor only one of:
@@ -131,7 +139,7 @@ DOWNLOADER_MIDDLEWARES = {
 # Configure item pipelines
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    # 'lagou.pipelines.MysqlPipeline': 300,
+    'lagou.pipelines.MysqlPipeline': 300,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)

@@ -8,6 +8,7 @@ from scrapy import Request
 from scrapy import FormRequest
 
 from scrapy.conf import settings
+from scrapy.exceptions import CloseSpider
 
 from lagou.items import PositionItem, CompanyItem, DetailItem
 from lagou.helper import deal_position_desc, deal_position_temptation
@@ -20,6 +21,7 @@ class PositionSpider(scrapy.Spider):
 
     meta = settings['META']
     cookies = settings['COOKIES']
+    max_error_num = settings['MAX_ERROR_NUM']
     # referer 问题导致302跳转到验证页面，不能从json页面跳转
     headers = {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
@@ -39,7 +41,7 @@ class PositionSpider(scrapy.Spider):
             url = 'https://m.lagou.com/search.json?city=%s&positionName=%s&pageNo=%s&pageSize=15'
 
             # 获取最大页数
-            request = Request(url % (city, keyword, 1), callback=self.max_page_number)
+            request = Request(url % (city, keyword, 1), callback=self.max_page_number, errback=self.handle_error)
             request.meta['url'] = url
             request.meta['keyword'] = keyword
             request.meta['city'] = city
@@ -63,7 +65,7 @@ class PositionSpider(scrapy.Spider):
                 cities = f.readlines()
             for city in cities:
                 city = parse.quote(city.strip())
-                request = Request(url % (city, keyword, 1), cookies=self.cookies, callback=self.max_page_number)
+                request = Request(url % (city, keyword, 1), cookies=self.cookies, callback=self.max_page_number, errback=self.handle_error)
                 request.meta['url'] = url
                 request.meta['keyword'] = keyword
                 request.meta['city'] = city
@@ -71,7 +73,7 @@ class PositionSpider(scrapy.Spider):
         else:
             page_number = int(total_count / 15 + 1)
             for i in range(1, page_number + 1):
-                request = Request(url % (city, keyword, i), cookies=self.cookies, callback=self.parse_positions)
+                request = Request(url % (city, keyword, i), cookies=self.cookies, callback=self.parse_positions, errback=self.handle_error)
                 yield request
 
 
@@ -98,7 +100,7 @@ class PositionSpider(scrapy.Spider):
             detail_url = 'https://m.lagou.com/jobs/%s.html'
             # 需要设置cookie, headers防止302
             # 需要手动添加headers
-            reqeust = FormRequest(detail_url % pid, headers=self.headers, meta=self.meta, cookies=self.cookies, callback=self.parse_detail)
+            reqeust = FormRequest(detail_url % pid, headers=self.headers, meta=self.meta, cookies=self.cookies, callback=self.parse_detail, errback=self.handle_error)
             reqeust.meta['cid'] = cid
             reqeust.meta['pid'] = pid
             yield reqeust
@@ -132,3 +134,9 @@ class PositionSpider(scrapy.Spider):
         company['scale'] = desc[2].strip()
         company['finance_stage'] = desc[1].strip()
         yield company
+
+
+    def handle_error(self, response):
+        self.max_error_num -= 1
+        if self.max_error_num < 0:
+            raise CloseSpider()

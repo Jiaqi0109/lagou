@@ -58,6 +58,8 @@ def deal_position_desc(descriptions):
                     desc = desc[1:]
                 if desc.startswith('）'):
                     desc = desc[1:]
+                if desc.startswith('●'):
+                    desc = desc[1:]
 
                 result.append(desc.strip())
                 break
