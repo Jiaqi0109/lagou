@@ -55,6 +55,12 @@ class PositionSpider(scrapy.Spider):
         city = response.meta['city']
 
         total_count = data['content']['data']['page']['totalCount']
+        # 处理职位关键字
+        # if int(total_count) <= 20000 and int(total_count) >= 200:
+        #     with open('./KEYWORDS/category.txt', 'a') as f:
+        #         f.write(parse.unquote(keyword) + '\n')
+        #     print(parse.unquote(keyword) + ':' + total_count)
+
         # 判断是否有数据
         if not total_count:
             total_count = 0

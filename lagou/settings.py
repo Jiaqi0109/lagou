@@ -64,7 +64,7 @@ USER_AGENT_LIST = [
 ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
-CONCURRENT_REQUESTS = 32
+CONCURRENT_REQUESTS = 64
 COOKIES_ENABLED = True
 # DOWNLOAD_DELAY = 1
 
