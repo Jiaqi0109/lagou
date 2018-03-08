@@ -4,20 +4,17 @@ from datetime import datetime
 from urllib import parse
 
 import scrapy
-from scrapy import Request
-from scrapy import FormRequest
-
+from lagou.helper import (deal_position_desc, deal_position_pubtime,
+                          deal_position_temptation)
+from lagou.items import CompanyItem, DetailItem, PositionItem
+from scrapy import FormRequest, Request
 from scrapy.conf import settings
 from scrapy.exceptions import CloseSpider
-
-from lagou.items import PositionItem, CompanyItem, DetailItem
-from lagou.helper import deal_position_desc, deal_position_temptation, deal_position_pubtime
 
 
 class PositionSpider(scrapy.Spider):
     name = 'position'
     allowed_domains = ['m.lagou.com']
-
 
     meta = settings['META']
     cookies = settings['COOKIES']
@@ -29,7 +26,6 @@ class PositionSpider(scrapy.Spider):
         'Host': 'm.lagou.com',
         'Referer': 'https://m.lagou.com/search.html',
     }
-
 
     def start_requests(self):
         with open('./KEYWORDS/category.txt', 'r') as f:
@@ -46,7 +42,6 @@ class PositionSpider(scrapy.Spider):
             request.meta['keyword'] = keyword
             request.meta['city'] = city
             yield request
-
 
     def max_page_number(self, response):
         data = json.loads(response.body_as_unicode())
@@ -82,7 +77,6 @@ class PositionSpider(scrapy.Spider):
                 request = Request(url % (city, keyword, i), cookies=self.cookies, callback=self.parse_positions, errback=self.handle_error)
                 yield request
 
-
     def parse_positions(self, response):
         data = json.loads(response.body_as_unicode())
         positions = data['content']['data']['page']['result']
@@ -102,7 +96,6 @@ class PositionSpider(scrapy.Spider):
             position['crawl_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             yield position
 
-
             # 工作详情页，获取job详情和company详情
             detail_url = 'https://m.lagou.com/jobs/%s.html'
             # 需要设置cookie, headers防止302
@@ -111,7 +104,6 @@ class PositionSpider(scrapy.Spider):
             reqeust.meta['cid'] = cid
             reqeust.meta['pid'] = pid
             yield reqeust
-
 
     def parse_detail(self, response):
 
@@ -128,7 +120,6 @@ class PositionSpider(scrapy.Spider):
         detail['crawl_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         yield detail
 
-
         company = CompanyItem()
         c_content = response.xpath('//div[contains(@class, "company")]')
         company['cid'] = response.meta['cid']
@@ -141,7 +132,6 @@ class PositionSpider(scrapy.Spider):
         company['scale'] = desc[2].strip()
         company['finance_stage'] = desc[1].strip()
         yield company
-
 
     def handle_error(self, response):
         self.max_error_num -= 1

@@ -1,17 +1,6 @@
 from datetime import date
 
-keyWords = [
-    '精通',
-    '熟悉',
-    '掌握',
-    '了解',
-    '编写',
-    '开发',
-    '理解',
-    '熟练',
-    '能力',
-    '维护'
-]
+keyWords = ['精通', '熟悉', '掌握', '了解', '编写', '开发', '理解', '熟练', '能力', '维护']
 
 
 def deal_position_desc(descriptions):
@@ -76,11 +65,13 @@ def deal_position_temptation(temptation):
         tem = temptation[5:]
     return tem
 
+
 def deal_position_pubtime(publish_time):
     time = publish_time
     today = date.today()
     if time.startswith('昨天'):
-        return date(today.year, today.month, today.day-1).strftime('%Y-%m-%d')
+        return date(today.year, today.month,
+                    today.day - 1).strftime('%Y-%m-%d')
     elif time.startswith('今天'):
         return today.strftime('%Y-%m-%d')
     return time
