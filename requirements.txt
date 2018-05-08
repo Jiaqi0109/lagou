@@ -1,4 +1,0 @@
-scrapy
-pymysql
-faker
-requests

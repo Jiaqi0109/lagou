@@ -118,7 +118,7 @@ DEFAULT_REQUEST_HEADERS = {
     'Accept': 'application/json',
     'Accept-Encoding': 'gzip, deflate, sdch',
     'Host': 'm.lagou.com',
-    'Referer': 'https://m.lagou.com/search.html',
+    'Referer': 'https://m.lagou.com/home.html',
     'Connection': 'keep-alive'
 }
 

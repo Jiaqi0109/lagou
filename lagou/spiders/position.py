@@ -6,7 +6,7 @@ from urllib import parse
 import scrapy
 from lagou.helper import (deal_position_desc, deal_position_pubtime,
                           deal_position_temptation)
-from lagou.items import CompanyItem, DetailItem, PositionItem
+from lagou.items import CompanyItem, PositionItem
 from scrapy import FormRequest, Request
 from scrapy.conf import settings
 from scrapy.exceptions import CloseSpider
@@ -24,11 +24,11 @@ class PositionSpider(scrapy.Spider):
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
         'Connection': 'keep-alive',
         'Host': 'm.lagou.com',
-        'Referer': 'https://m.lagou.com/search.html',
+        'Referer': 'https://m.lagou.com/home.html',
     }
 
     def start_requests(self):
-        with open('./KEYWORDS/category.txt', 'r') as f:
+        with open('./KEYWORDS/tech.txt', 'r') as f:
             keywords = f.readlines()
         for keyword in keywords:
             # 字符转码(urlEncode)
@@ -81,57 +81,80 @@ class PositionSpider(scrapy.Spider):
         data = json.loads(response.body_as_unicode())
         positions = data['content']['data']['page']['result']
         for p in positions:
-            position = PositionItem()
             pid = p['positionId']
-            position['pid'] = pid
-            position['name'] = p['positionName']
-            position['city'] = p['city']
+            positionName = p['positionName']
+            city = p['city']
             publish_time = p['createTime']
-            position['publish_time'] = deal_position_pubtime(publish_time)
-            position['salary'] = p['salary']
+            publish_time = deal_position_pubtime(publish_time)
+            salary = p['salary']
             cid = p['companyId']
-            position['cid'] = cid
-            position['c_name'] = p['companyName']
-            position['c_full_name'] = p['companyFullName']
-            position['crawl_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            yield position
+            companyName = p['companyName']
+            companyFullName = p['companyFullName']
 
             # 工作详情页，获取job详情和company详情
             detail_url = 'https://m.lagou.com/jobs/%s.html'
+            company_url = 'https://m.lagou.com/gongsi/%s.html'
             # 需要设置cookie, headers防止302
             # 需要手动添加headers
-            reqeust = FormRequest(detail_url % pid, headers=self.headers, meta=self.meta, cookies=self.cookies, callback=self.parse_detail, errback=self.handle_error)
-            reqeust.meta['cid'] = cid
-            reqeust.meta['pid'] = pid
-            yield reqeust
+            p_reqeust = FormRequest(detail_url % pid, headers=self.headers, meta=self.meta, cookies=self.cookies, callback=self.parse_detail, errback=self.handle_error)
+            c_reqeust = FormRequest(company_url % cid, headers=self.headers, meta=self.meta, cookies=self.cookies, callback=self.parse_company, errback=self.handle_error)
+
+            p_reqeust.meta['pid'] = pid
+            p_reqeust.meta['city'] = city
+            p_reqeust.meta['positionName'] = positionName
+            p_reqeust.meta['publish_time'] = publish_time
+            p_reqeust.meta['salary'] = salary
+            p_reqeust.meta['cid'] = cid
+            yield p_reqeust
+
+            c_reqeust.meta['cid'] = cid
+            c_reqeust.meta['companyName'] = companyName
+            c_reqeust.meta['companyFullName'] = companyFullName
+            yield c_reqeust
 
     def parse_detail(self, response):
 
-        detail = DetailItem()
+        position = PositionItem()
         d_content = response.xpath('//div[@class="detail"]')
-        detail['pid'] = response.meta['pid']
-        detail['workyear'] = d_content.xpath('.//span[contains(@class, "workyear")]/span/text()').extract_first().strip()
-        detail['education'] = d_content.xpath('.//span[contains(@class, "education")]/span/text()').extract_first().strip()
-        detail['jobnature'] = d_content.xpath('.//span[contains(@class, "jobnature")]/span/text()').extract_first().strip()
-        temptation = d_content.xpath('./div[@class="temptation"]/text()').extract_first().strip()
-        detail['temptation'] = deal_position_temptation(temptation)
-        descriptions = response.xpath('//div[@class="positiondesc"]/div/p/text()').extract()
-        detail['description'] = deal_position_desc(descriptions)
-        detail['crawl_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        yield detail
+        position['pid'] = response.meta['pid']
+        position['cid'] = response.meta['cid']
+        position['name'] = response.meta['positionName']
+        position['city'] = response.meta['city']
+        position['publish_time'] = response.meta['publish_time']
+        position['salary'] = response.meta['salary']
 
+        position['workyear'] = d_content.xpath('.//span[contains(@class, "workyear")]/span/text()').extract_first().strip()
+        position['education'] = d_content.xpath('.//span[contains(@class, "education")]/span/text()').extract_first().strip()
+        position['jobnature'] = d_content.xpath('.//span[contains(@class, "jobnature")]/span/text()').extract_first().strip()
+        temptation = d_content.xpath('./div[@class="temptation"]/text()').extract_first().strip()
+        position['temptation'] = deal_position_temptation(temptation)
+        descriptions = response.xpath('//div[@class="positiondesc"]/div/p/text()').extract()
+        # detail['description'] = deal_position_desc(descriptions)
+        position['description'] = '\n'.join(descriptions)
+        position['crawl_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        yield position
+
+
+
+    def parse_company(self, response):
         company = CompanyItem()
-        c_content = response.xpath('//div[contains(@class, "company")]')
+        c_content = response.xpath('//div[@id="content"]/div[@class="info"]')
         company['cid'] = response.meta['cid']
+        company['name'] = response.meta['companyName']
+        company['full_name'] = response.meta['companyFullName']
+
         company['logo'] = c_content.xpath('./img/@src').extract_first()
         if company['logo']:
             company['logo'] = 'https:' + company['logo']
-        desc = c_content.xpath('./div[@class="desc"]//p[@class="info"]/text()').extract_first()
+        company['city'] = c_content.xpath('.//p[@class="position"]/span/text()').extract_first().strip()
+        desc = c_content.xpath('.//p[@class="desc"]/text()').extract_first()
         desc = desc.split('/')
         company['industry'] = desc[0].strip()
-        company['scale'] = desc[2].strip()
         company['finance_stage'] = desc[1].strip()
+        company['scale'] = desc[2].strip()
+        company['crawl_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         yield company
+
 
     def handle_error(self, response):
         self.max_error_num -= 1
